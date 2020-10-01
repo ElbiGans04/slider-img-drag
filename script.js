@@ -1,76 +1,121 @@
-$(function() {
-    var sliding = startClientX = startPixelOffset = pixelOffset = currentSlide = 0;
-    slideCount = $('.image-item').length;
-    
-    $('.container').on('mousedown touchstart', slideStart);
-    $('.container').on('mouseup touchend', slideEnd);
-    $('.container').on('mousemove touchmove', slide);
-    
-    /**
-    / Triggers when slide event started
-    */
-    function slideStart(event) {
-      // If it is mobile device redefine event to first touch point
-      if (event.originalEvent.touches)
-        event = event.originalEvent.touches[0];
-      // If sliding not started yet store current touch position to calculate distance in future.
-      if (sliding == 0) {
-        sliding = 1; // Status 1 = slide started.
-        startClientX = event.clientX;
-      }
-    }
-    
-    /** Occurs when image is being slid.
-    */
-    function slide(event) {
-      event.preventDefault();
-      if (event.originalEvent.touches)
-        event = event.originalEvent.touches[0];
-      // Distance of slide.
-      var deltaSlide = event.clientX - startClientX;
-      // If sliding started first time and there was a distance.
-      if (sliding == 1 && deltaSlide != 0) {
-        sliding = 2; // Set status to 'actually moving'
-        startPixelOffset = pixelOffset; // Store current offset
-      }
-      
-      //  When user move image
-      if (sliding == 2) {
-        // Means that user slide 1 pixel for every 1 pixel of mouse movement.
-        var touchPixelRatio = 1;
-        // Check for user doesn't slide out of boundaries
-        if ((currentSlide == 0 && event.clientX > startClientX) ||
-           (currentSlide == slideCount - 1 && event.clientX < startClientX))
-                // Set ratio to 3 means image will be moving by 3 pixels each time user moves it's pointer by 1 pixel. (Rubber-band effect)
-                touchPixelRatio = 3;
-        // Calculate move distance.
-        pixelOffset = startPixelOffset + deltaSlide / touchPixelRatio;
-        // Apply moving and remove animation class
-        $('#main').css('transform', 'translateX(' + pixelOffset + 'px').removeClass();
-    }
-}
+(function(){
+  let sliding = startClientX = startPixelOffset = pixelOffset = currentSlide = 0,
+      container = document.querySelector('.container'),
+      head = document.getElementsByTagName('head')[0],
+      imageItems = document.querySelectorAll('.image-item'),
+      imageCount = imageItems.length,
+      mainContainer = document.getElementById('main');
 
-/** When user release pointer finish slide moving.
- */
-function slideEnd(event) {
-    if (sliding == 2){
-        // Reset sliding.
-        console.log(`Sliding: ${sliding}, startClientX: ${startClientX}, startPixelOffset: ${startPixelOffset}, pixel: ${pixelOffset}, currentSide: ${currentSlide}`)
-        sliding = 0;
-        // Calculate which slide need to be in view.
-        currentSlide = pixelOffset < startPixelOffset ? currentSlide + 1 : currentSlide -1;
-        // Make sure that unexisting slides weren't selected.
-        currentSlide = Math.min(Math.max(currentSlide, 0), slideCount - 1);
-        console.log(currentSlide)
-        // Since in this example slide is full viewport width offset can be calculated according to it.
-        pixelOffset = currentSlide * -$('.container').width();
-        // Remove style from DOM (look below)
-        $('#temp').remove();
-        // Add a translate rule dynamically and asign id to it
-        $('<style id="temp">#main.animate{transform:translateX(' + pixelOffset + 'px)}</style>').appendTo('head');
-        // Add animate class to slider and reset transform prop of this class.
-        $('#main').addClass('animate').css('transform', '');
+  // Beri event kepada container
+  container.addEventListener('mousedown', slideStart);
+  container.addEventListener('mousemove', slide);
+  container.addEventListener('mouseup', slideOut);
+  // container.addEventListener('touchstart', slideStart);
+
+
+  // Function 
+  function slideStart(event){
+
+    // Jika client memakai layar sentuh
+    if(event.touches){
+      event = event.touches;
+    };
+
+    // Ambil posisi sentuh saat ini & assign nilai sliding menjadi 1
+    if(sliding === 0){
+      sliding = 1;
+      startClientX = event.clientX;
+    };
+
+  };
+
+  function slide(event){
+    // Matikan perilaku default container
+    event.preventDefault();
+
+    // Jika perangkatnya layar sentuh
+    if (event.touches)
+      event = event.touches;
+
+    // Hitung jarak saat ini 
+    let deltaSlide = event.clientX - startClientX;
+    
+    // Jika sliding 1 dan jarak bukan 0 yang berarti itu sudah bergerak
+    if(sliding === 1 && deltaSlide != 0){
+      sliding = 2;
+      startPixelOffset = pixelOffset;
+    };
+
+
+    // saat cursor mulai bergerak
+    if(sliding === 2){
+      var touchPixelRatio = 1;
+
+      if ((currentSlide == 0 && event.clientX > startClientX) || 
+         (currentSlide == imageCount - 1 && event.clientX < startClientX))
+             touchPixelRatio = 4;
+      
+      
+      // Hitung value
+      pixelOffset = startPixelOffset + deltaSlide / touchPixelRatio;
+
+      //Atur ke transform ke container
+      mainContainer.style.transform = `translateX(${pixelOffset}px)`
+      mainContainer.classList.remove('animate');
+    }
+
+
+
+  };
+
+  function slideOut(event){
+    if(sliding === 2){
+
+      // Reset sliding
+      sliding = 0;
+  
+      // Hitung Sliding aktif
+      currentSlide = pixelOffset < startPixelOffset ? currentSlide + 1 : currentSlide - 1;
+  
+      currentSlide = Math.min( Math.max(currentSlide, 0), imageCount - 1);
+      
+  
+      // Hitung jarak 
+      var width = window.getComputedStyle(document.querySelector(".container"), null);
+      width = width.getPropertyValue("width");
+      width = width.slice(0,width.length -2 )
+      
+  
+      pixelOffset = currentSlide * - Number(width);
+      
+      // Jika style dengan id temp sudah
+      if (document.getElementById('temp') != null) {
+        // Hapus element tersebut
+        document.getElementById('temp').remove()
       }
+      console.log(pixelOffset)
+      // Buat element style
+      let style = document.createElement('style');
+      let styleText = document.createTextNode('#main.animate{transform:translateX(' + pixelOffset + 'px)}');
+      style.setAttribute('id', 'temp');
+      style.appendChild(styleText);
+      head.appendChild(style)
+      
+      mainContainer.classList.add('animate');
+      mainContainer.style.transform = ``;
+  
+      // $('#temp').remove()
+      // $('<style id="temp">#main.animate{transform:translateX(' + pixelOffset + 'px)}</style>').appendTo('head');
+      // // Add animate class to slider and reset transform prop of this class.
+      // $('#main').addClass('animate').css('transform', '');
     }
     
-  });
+
+
+  }
+
+
+
+
+
+})()
